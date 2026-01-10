@@ -1,0 +1,44 @@
+﻿
+# ===== Python backend =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.env
+.env.local
+
+# ===== Node.js frontend =====
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# ===== IDE & OS =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ===== Logs & build =====
+*.log
+*.pid
+build/
+dist/
+backend/logs/
+
+# Runtime customer uploads (keep example/sample dirs only)
+backend/uploads/*
+!backend/uploads/kyc_docs/
+!backend/uploads/salary_slips/
+!backend/uploads/sample_data/
+
+# ===== Local only (never commit) =====
+frontend/trustkaro-portal
+rebuild_git.local.sh
+README.full.bak
+
+# ===== Local database files =====
+backend/db/*.sqlite3
+backend/db/*.db
+backend/db/.banker_credentials.local.json
+*.csv
+backend/master_agent/checkpointer.sqlite
