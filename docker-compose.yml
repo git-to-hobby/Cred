@@ -1,0 +1,199 @@
+# CredFlow — full backend stack for local/VPS deployment
+# Usage:
+#   cp .env.docker.example .env   # add GOOGLE_API_KEY
+#   docker compose up --build -d
+#   docker compose run --rm db-init
+
+x-backend-env: &backend-env
+  GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+  DB_NAME: loan_chatbot_db
+  DB_USER: postgres
+  DB_PASSWORD: ${DB_PASSWORD:-credflow_dev}
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  MONGO_URI: mongodb://mongo:27017/
+  MONGO_DB_NAME: loan_archives
+  TESSERACT_CMD: /usr/bin/tesseract
+
+x-agent-env: &agent-env
+  <<: *backend-env
+  SALES_AGENT_URL: http://sales-agent:8001/sales
+  VERIFICATION_AGENT_URL: http://verification-agent:8002/verify
+  VERIFICATION_STATEMENT_URL: http://verification-agent:8002/analyze-statement
+  UNDERWRITING_AGENT_URL: http://underwriting-agent:8003/underwrite
+  SANCTION_AGENT_URL: http://sanction-agent:8004/sanction
+  DOC_PROCESSOR_URL: http://doc-processor:8005/verify_salary
+  CRM_SERVICE_URL: http://mock-crm:9001/crm
+  CREDIT_BUREAU_URL: http://mock-credit-bureau:9002/credit_score
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-credflow_dev}
+      POSTGRES_DB: loan_chatbot_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d loan_chatbot_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-init:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/db
+    command: python setup_postgres_db.py
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  master-agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/master_agent
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *agent-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+
+  sales-agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/agents/sales_agent
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8001
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+
+  verification-agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/agents/verification_agent
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8002
+    environment:
+      <<: *agent-env
+    depends_on:
+      mock-crm:
+        condition: service_started
+
+  underwriting-agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/agents/underwriting_agent
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8003
+    environment:
+      <<: *agent-env
+    depends_on:
+      mock-credit-bureau:
+        condition: service_started
+
+  sanction-agent:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/agents/sanction_generator
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8004
+    environment:
+      <<: *agent-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      mock-crm:
+        condition: service_started
+
+  doc-processor:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/agents/doc_processor
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8005
+    ports:
+      - "8005:8005"
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mock-crm:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/mock_services/crm
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 9001
+    ports:
+      - "9001:9001"
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+
+  mock-credit-bureau:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/mock_services/credit_bureau
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 9002
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+
+  mock-offer-mart:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app/mock_services/offer_mart
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 9003
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+  mongo_data:
