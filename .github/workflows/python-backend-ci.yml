@@ -1,0 +1,39 @@
+name: Python Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/python-backend-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install test tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest flake8
+
+      - name: Lint with flake8
+        run: |
+          flake8 backend/ \
+            --exclude=venv,.venv,__pycache__ \
+            --extend-ignore=F824 \
+            --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run smoke test
+        run: pytest backend/test_smoke.py -v
