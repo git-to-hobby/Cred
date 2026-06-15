@@ -1,4 +1,4 @@
-# Agentic AI Loan Sales Chatbot (CredFlow)
+# Agentic AI Loan Sales Query (CredFlow)
 
 **Live demo:** https://credflow-portal.vercel.app  
 **Backend API:** https://credflow-master.onrender.com  
