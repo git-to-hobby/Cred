@@ -57,8 +57,8 @@ Plus 3 Mock Services for CRM, Credit Bureau, and Offer Mart
 
 1. Clone the Repository
 ```bash
-git clone https://github.com/Sonudocc/CredFlow.git
-cd CredFlow
+git clone https://github.com/git-to-hobby/Cred.git
+cd Cred
 ```
  
 2. Prerequisites
