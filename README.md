@@ -1,7 +1,7 @@
 # Agentic AI Loan Sales Query (CredFlow)
 
 **Live demo:** https://credflow-portal.vercel.app  
-**Backend API:** https://trustkaro-master.onrender.com  
+**Backend API:** https://credflow-master.onrender.com  
 **Demo login:** Customer ID `711007500` / Password `Sonu@123` · Admin portal: `/admin/login` (server-configured credentials)
 
 A multi-agent AI system based on RAG and based on Langraph-framework.
