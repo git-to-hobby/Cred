@@ -2563,10 +2563,7 @@ async def verify_customer_kyc(cust_id: str):
 
     try:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute(
-            "SELECT cust_id, name, aadhaar, phone, email FROM customers WHERE cust_id = %s",
-            (cust_id,),
-        )
+        cursor.execute("SELECT * FROM customers WHERE cust_id = %s", (cust_id,))
         customer = cursor.fetchone()
         if not customer:
             raise HTTPException(status_code=404, detail="Customer not found")
@@ -2603,6 +2600,11 @@ async def verify_customer_kyc(cust_id: str):
             "kyc_status": "not_verified",
             "message": "KYC incomplete. Please upload Aadhaar or PAN document.",
         }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"KYC verification failed for {cust_id}: {e}")
+        raise HTTPException(status_code=500, detail="KYC verification failed")
     finally:
         conn.close()
 
